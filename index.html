@@ -4,9 +4,6 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#1457a6">
-<meta name="description" content="部屋番号からエレベーターを検索するアプリ">
-<link rel="manifest" href="./manifest.json">
-<link rel="icon" href="./icon.svg" type="image/svg+xml">
 <title>部屋番号・エレベーター検索</title>
 <style>
 :root{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;color:#172033;background:#f3f6fb}
@@ -101,7 +98,7 @@ function renderResult(){
  }));
 }
 function renderList(){
- const box=document.getElementById('roomList');const items=data.saved.filter(x=>x.buildingId===building().id);
+ const box=document.getElementById('roomList');const order=['W-9','W-8','W-7','C-6','C-5','C-4','E-3','E-2','E-1'];const items=data.saved.filter(x=>x.buildingId===building().id).sort((a,b)=>{const ai=order.indexOf(a.elevator),bi=order.indexOf(b.elevator);const ar=ai<0?999:ai,br=bi<0?999:bi;return ar-br||(Number(a.room)-Number(b.room))||a.room.localeCompare(b.room,'ja');});
  if(!items.length){box.innerHTML='<p class="empty">まだ登録されていません。検索結果から登録できます。</p>';return}
  box.innerHTML=items.map((x,i)=>`<div class="item"><div><strong>${esc(x.room)}号室　${esc(x.elevator)}</strong><div class="meta">${esc(x.buildingName||'')}</div></div><button class="btn danger" data-delete="${i}">削除</button></div>`).join('');
  box.querySelectorAll('[data-delete]').forEach((btn,i)=>btn.addEventListener('click',()=>{const target=items[i];data.saved=data.saved.filter(x=>!(x.buildingId===target.buildingId&&x.room===target.room&&x.elevator===target.elevator));persist();renderList()}));
@@ -130,13 +127,6 @@ document.getElementById('importFile').addEventListener('change',async e=>{
 });
 renderBuildings();renderResult();renderList();persist();
 })();
-</script>
-<script>
-if ('serviceWorker' in navigator) {
-  window.addEventListener('load', () => {
-    navigator.serviceWorker.register('./sw.js').catch(err => console.log('Offline setup unavailable', err));
-  });
-}
 </script>
 </body>
 </html>
