@@ -1,18 +1,1 @@
-{
-  "name": "部屋番号・エレベーター検索",
-  "short_name": "エレベーター検索",
-  "description": "部屋番号からエレベーターを検索",
-  "start_url": "./",
-  "scope": "./",
-  "display": "standalone",
-  "background_color": "#f3f6fb",
-  "theme_color": "#1457a6",
-  "icons": [
-    {
-      "src": "./icon.svg",
-      "sizes": "any",
-      "type": "image/svg+xml",
-      "purpose": "any maskable"
-    }
-  ]
-}
+{"name":"配達管理","short_name":"配達管理","description":"オフライン荷物・シフト管理","start_url":"./","scope":"./","display":"standalone","background_color":"#f5f7fb","theme_color":"#1764bc","icons":[{"src":"./icon.svg","sizes":"any","type":"image/svg+xml","purpose":"any maskable"}]}

@@ -1,132 +1,32 @@
-<!doctype html>
-<html lang="ja">
-<head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<meta name="theme-color" content="#1457a6">
-<title>部屋番号・エレベーター検索</title>
-<style>
-:root{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;color:#172033;background:#f3f6fb}
-*{box-sizing:border-box}body{margin:0}header{background:#1457a6;color:white;padding:22px 16px 18px}
-header h1{font-size:22px;margin:0 0 6px}header p{margin:0;font-size:13px;opacity:.9}
-main{max-width:760px;margin:auto;padding:16px}
-nav{display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap}
-nav button,.btn{border:0;border-radius:12px;padding:12px 14px;font-size:15px;font-weight:700;min-height:44px;cursor:pointer}
-nav button{background:#e2eaf5;color:#17406f}nav button.active,.primary{background:#1457a6;color:white}
-.panel{background:white;border:1px solid #dce4ef;border-radius:16px;padding:16px;margin-bottom:14px}
-h2{font-size:18px;margin:0 0 12px}label{display:block;font-size:14px;font-weight:700;margin:12px 0 6px}
-input,select{width:100%;min-height:46px;border:1px solid #bdcbe0;border-radius:10px;padding:10px 12px;font:inherit;background:white}
-.row{display:flex;gap:8px;align-items:end}.row>div{flex:1;min-width:0}
-.btn{width:100%;margin-top:12px}.secondary{background:#e8eef7;color:#183c69}.danger{background:#fff0f0;color:#a32121}
-.result{background:#edf6ff;border:1px solid #c7e0ff;border-radius:14px;padding:18px;margin-top:14px}
-.room{font-size:25px;font-weight:800}.elevator{font-size:30px;font-weight:900;color:#1457a6;margin:5px 0}
-.small{font-size:13px;color:#53627a}.item{display:flex;justify-content:space-between;gap:12px;align-items:center;border-top:1px solid #e4eaf2;padding:12px 0}
-.item:first-child{border-top:0}.item strong{display:block}.item .meta{font-size:13px;color:#53627a;margin-top:3px}
-.item button{width:auto;margin:0;min-width:72px}.empty{padding:18px 0;color:#65738a;text-align:center}
-.notice{font-size:13px;line-height:1.6;color:#53627a}.hidden{display:none!important}
-@media(min-width:600px){main{padding:24px}.panel{padding:20px}}
-</style>
-</head>
-<body>
-<header><h1>部屋番号・エレベーター検索</h1><p>部屋番号からエレベーターをすばやく確認</p></header>
-<main>
-<div class="panel">
-<label for="building">マンション</label>
-<div class="row"><div><select id="building"></select></div><div style="flex:0 0 112px"><button id="addBuilding" class="btn secondary" style="margin-top:0">＋ 追加</button></div></div>
-</div>
-<nav aria-label="メニュー">
-<button class="active" data-tab="search">🔍 検索</button>
-<button data-tab="manage">✚ 部屋を登録</button>
-<button data-tab="list">📋 登録済みリスト</button>
-<button data-tab="backup">💾 保存・バックアップ</button>
-</nav>
-<section id="tab-search">
-<div class="panel">
-<h2>部屋番号を検索</h2>
-<label for="query">部屋番号</label>
-<input id="query" inputmode="numeric" placeholder="例：201" autocomplete="off">
-<div id="searchResult" aria-live="polite"><p class="empty">部屋番号を入力してください。</p></div>
-</div>
-</section>
-<section id="tab-manage" class="hidden">
-<div class="panel">
-<h2>部屋番号を登録</h2>
-<p class="notice">同じ部屋番号に複数のエレベーターを割り当てることもできます。</p>
-<label for="roomInput">部屋番号</label><input id="roomInput" placeholder="例：201">
-<label for="elevatorInput">エレベーター名</label><input id="elevatorInput" placeholder="例：E-1">
-<button id="saveRoom" class="btn primary">登録する</button>
-</div>
-</section>
-<section id="tab-list" class="hidden">
-<div class="panel"><h2>登録済みの部屋番号</h2><div id="roomList"></div></div>
-</section>
-<section id="tab-backup" class="hidden">
-<div class="panel">
-<h2>データの保存・バックアップ</h2>
-<p class="notice">データはこのブラウザ内に保存されます。ブラウザのデータ消去や端末故障に備え、定期的にバックアップを保存してください。</p>
-<button id="exportData" class="btn primary">バックアップを書き出す（JSON）</button>
-<label for="importFile">バックアップを読み込む</label><input type="file" id="importFile" accept=".json,application/json">
-<p class="notice">この試作版では、ブラウザ内に保存します。iPhoneのホーム画面アプリとしてのオフライン利用は、後でWeb公開・PWA設定を行う必要があります。</p>
-</div>
-</section>
-</main>
-<script>
-(function(){
-const KEY='elevatorFinderDataV1';
-const initial={activeBuilding:'sample',buildings:[{id:'sample',name:'サンプルマンション',rooms:[
-{room:'101',elevator:'E-1'},{room:'201',elevator:'E-1'},{room:'202',elevator:'E-1'},{room:'301',elevator:'E-1'},
-{room:'102',elevator:'E-2'},{room:'203',elevator:'E-2'},{room:'204',elevator:'E-2'},{room:'303',elevator:'E-2'},{room:'304',elevator:'E-2'}
-]}],saved:[]};
-let data;
-try{data=JSON.parse(localStorage.getItem(KEY))||initial}catch(e){data=initial}
-function persist(){try{localStorage.setItem(KEY,JSON.stringify(data))}catch(e){alert('保存できませんでした。バックアップを書き出してください。')}}
-function building(){return data.buildings.find(b=>b.id===data.activeBuilding)||data.buildings[0]}
-function esc(s){return String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
-function renderBuildings(){
- const sel=document.getElementById('building');sel.innerHTML='';
- data.buildings.forEach(b=>{const o=document.createElement('option');o.value=b.id;o.textContent=b.name;sel.appendChild(o)});
- sel.value=data.activeBuilding;
-}
-function renderResult(){
- const q=document.getElementById('query').value.trim();const box=document.getElementById('searchResult');
- if(!q){box.innerHTML='<p class="empty">部屋番号を入力してください。</p>';return}
- const matches=building().rooms.filter(r=>r.room.toLowerCase()===q.toLowerCase());
- if(!matches.length){box.innerHTML='<p class="empty">該当する部屋番号がありません。部屋番号を登録してください。</p>';return}
- box.innerHTML=matches.map((r,i)=>`<div class="result"><div class="room">${esc(r.room)}号室</div><div class="elevator">${esc(r.elevator)}</div><p class="small">マンション：${esc(building().name)}</p><button class="btn primary" data-save="${i}">リストに登録</button></div>`).join('');
- box.querySelectorAll('[data-save]').forEach((btn,i)=>btn.addEventListener('click',()=>{
- const r=matches[i];if(!data.saved.some(x=>x.buildingId===building().id&&x.room===r.room&&x.elevator===r.elevator)){data.saved.push({buildingId:building().id,buildingName:building().name,room:r.room,elevator:r.elevator});persist();renderList();btn.textContent='登録しました';btn.disabled=true}else{btn.textContent='登録済み';btn.disabled=true}
- }));
-}
-function renderList(){
- const box=document.getElementById('roomList');const order=['W-9','W-8','W-7','C-6','C-5','C-4','E-3','E-2','E-1'];const items=data.saved.filter(x=>x.buildingId===building().id).sort((a,b)=>{const ai=order.indexOf(a.elevator),bi=order.indexOf(b.elevator);const ar=ai<0?999:ai,br=bi<0?999:bi;return ar-br||(Number(a.room)-Number(b.room))||a.room.localeCompare(b.room,'ja');});
- if(!items.length){box.innerHTML='<p class="empty">まだ登録されていません。検索結果から登録できます。</p>';return}
- box.innerHTML=items.map((x,i)=>`<div class="item"><div><strong>${esc(x.room)}号室　${esc(x.elevator)}</strong><div class="meta">${esc(x.buildingName||'')}</div></div><button class="btn danger" data-delete="${i}">削除</button></div>`).join('');
- box.querySelectorAll('[data-delete]').forEach((btn,i)=>btn.addEventListener('click',()=>{const target=items[i];data.saved=data.saved.filter(x=>!(x.buildingId===target.buildingId&&x.room===target.room&&x.elevator===target.elevator));persist();renderList()}));
-}
-function showTab(name){document.querySelectorAll('nav button').forEach(b=>b.classList.toggle('active',b.dataset.tab===name));['search','manage','list','backup'].forEach(t=>document.getElementById('tab-'+t).classList.toggle('hidden',t!==name));if(name==='list')renderList()}
-document.querySelectorAll('nav button').forEach(b=>b.addEventListener('click',()=>showTab(b.dataset.tab)));
-document.getElementById('building').addEventListener('change',e=>{data.activeBuilding=e.target.value;persist();renderResult();renderList()});
-document.getElementById('query').addEventListener('input',renderResult);
-document.getElementById('saveRoom').addEventListener('click',()=>{
- const room=document.getElementById('roomInput').value.trim(), elevator=document.getElementById('elevatorInput').value.trim();
- if(!room||!elevator){alert('部屋番号とエレベーター名を入力してください。');return}
- const b=building();const exists=b.rooms.some(r=>r.room.toLowerCase()===room.toLowerCase()&&r.elevator.toLowerCase()===elevator.toLowerCase());
- if(exists){alert('この部屋番号とエレベーターは登録済みです。');return}
- b.rooms.push({room,elevator});persist();document.getElementById('roomInput').value='';document.getElementById('elevatorInput').value='';renderResult();renderList();alert(room+'号室を'+elevator+'として登録しました。');
-});
-document.getElementById('addBuilding').addEventListener('click',()=>{
- const name=prompt('マンション名を入力してください');if(!name||!name.trim())return;
- const id='b'+Date.now();data.buildings.push({id,name:name.trim(),rooms:[]});data.activeBuilding=id;persist();renderBuildings();renderResult();renderList();
-});
-document.getElementById('exportData').addEventListener('click',()=>{
- const blob=new Blob([JSON.stringify(data,null,2)],{type:'application/json'});const url=URL.createObjectURL(blob);const a=document.createElement('a');a.href=url;a.download='elevator-finder-backup.json';a.click();URL.revokeObjectURL(url);
-});
-document.getElementById('importFile').addEventListener('change',async e=>{
- const file=e.target.files[0];if(!file)return;
- try{const parsed=JSON.parse(await file.text());if(!Array.isArray(parsed.buildings)||!Array.isArray(parsed.saved))throw new Error();if(!confirm('現在のデータをバックアップ内容で置き換えますか？'))return;data=parsed;persist();renderBuildings();renderResult();renderList();alert('バックアップを読み込みました。')}catch(err){alert('ファイルを読み込めませんでした。正しいバックアップJSONを選んでください。')}e.target.value='';
-});
-renderBuildings();renderResult();renderList();persist();
+<!doctype html><html lang="ja"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="theme-color" content="#1764bc"><link rel="manifest" href="./manifest.json"><title>配達管理</title><style>
+:root{font-family:-apple-system,BlinkMacSystemFont,"Hiragino Kaku Gothic ProN",sans-serif;color:#192b42;background:#f5f7fb}*{box-sizing:border-box}body{margin:0;padding-bottom:calc(86px + env(safe-area-inset-bottom))}button,input,select{font:inherit}button{cursor:pointer}header{background:#1764bc;color:white;padding:17px 16px 15px}header h1{font-size:21px;margin:0}header small{opacity:.9}main{max-width:720px;margin:auto;padding:14px}.card{background:#fff;border:1px solid #dfe6f0;border-radius:14px;padding:15px;margin-bottom:13px}h2{font-size:18px;margin:0 0 12px}h3{font-size:16px;margin:12px 0 8px}label{font-size:14px;font-weight:700;display:block;margin:10px 0 5px}input,select{width:100%;min-height:46px;border:1px solid #b9c9db;border-radius:9px;padding:9px 11px;background:white;font-size:16px}button{min-height:44px;border-radius:10px;border:1px solid #b6c9de;padding:9px 12px;background:#eef4fc;color:#1c5085;font-weight:700}button.primary{background:#1764bc;color:white;border-color:#1764bc}button.danger{color:#a52227;background:#fff2f2;border-color:#f0baba}button.small{font-size:13px;padding:6px 9px;min-height:38px}button.selected{background:#1764bc;color:white}button:disabled{opacity:.45;cursor:not-allowed}.row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}.row>*{min-width:0}.grow{flex:1}.muted{color:#61738a;font-size:13px}.hint{font-size:13px;color:#456580}.hidden{display:none!important}.stats{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:5px;margin:12px 0}.stat{border-radius:9px;background:#eaf2fd;padding:8px 3px;text-align:center;font-size:11px}.stat strong{display:block;font-size:21px;color:#1256a4}.notice{padding:10px;border-radius:9px;background:#e8f7ee;color:#17623b;margin-top:9px;font-size:14px}.result{padding:11px;border:1px solid #d4e1ef;border-radius:10px;margin-top:9px}.candidate{width:100%;text-align:left;margin:4px 0}.route{border:1px solid #cfdaeb;border-radius:12px;overflow:hidden;margin:12px 0;background:white}.routehead{width:100%;border:0;border-radius:0;text-align:left;background:#e7f0fc;color:#174c85;padding:13px}.routebody{padding:9px}.room{border-bottom:1px solid #e5ebf2;padding:10px 0}.room:last-child{border-bottom:0}.roomtitle{font-size:19px;font-weight:800}.recipient{margin:8px 0 5px;font-size:14px;font-weight:700}.pkg{border:1px solid #e3e8f0;border-radius:9px;padding:9px;margin:7px 0}.pkg.done{opacity:.58;background:#f4f6f9}.pkg .row{margin-top:7px}.pkg button{flex:0 0 auto}.tag{font-size:12px;color:#4c6077}.tabs{position:fixed;bottom:0;left:0;right:0;background:white;border-top:1px solid #cbd8e8;display:flex;padding:7px 7px calc(7px + env(safe-area-inset-bottom));z-index:10}.tabs button{flex:1;border:0;background:white;color:#5c6c7d}.tabs button.active{background:#e4f0ff;color:#155caa}.calendar{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:5px}.day{padding:5px 1px;min-height:53px;background:white;border:1px solid #d8e1ed;border-radius:8px;font-size:13px}.day.on{background:#fff0f0;border-color:#ef9da2}.circle{color:#c72435;font-size:20px;font-weight:800;display:block;line-height:20px}.day:disabled{background:transparent;border:0}.settingsroom{border-top:1px solid #e7ecf3;padding:9px 0}.nowrap{white-space:nowrap}textarea{width:100%;min-height:160px;font:14px/1.6 monospace} @media(max-width:360px){.stats{gap:3px}.stat strong{font-size:18px}.pkg button{padding:7px 8px;font-size:12px}}
+</style></head><body><header><h1>📦 配達管理</h1><small>荷物・シフトをオフラインで管理</small></header><main>
+<section id="tab-packages"><div class="card"><label for="building">アパート</label><select id="building"></select><div class="stats" id="stats"></div><label for="query">部屋番号を検索</label><input id="query" type="text" inputmode="numeric" autocomplete="off" placeholder="例：201"><div id="candidates"></div><div id="result"></div><div id="notice" class="hidden notice" role="status"></div></div><div class="card"><div class="row"><h2 class="grow">荷物一覧</h2><button id="resetPackages" class="danger small">この棟の荷物をリセット</button></div><div id="packageList"></div></div></section>
+<section id="tab-shifts" class="hidden"><div class="card"><div class="row"><button id="prevMonth">◀ 前月</button><h2 id="monthTitle" class="grow" style="text-align:center;margin:0"></h2><button id="nextMonth">翌月 ▶</button></div><p class="hint">「シフトを編集」を押して、出勤可能な日をタップしてください。赤い◯が付きます。</p><button id="shiftEdit" class="primary">シフトを編集</button><div class="calendar" id="calendar" style="margin-top:12px"></div><button id="submitShift" class="primary" style="width:100%;margin-top:14px">シフトを提出（文章をコピー）</button><div id="shiftOutput" class="hidden"><label>提出用テキスト</label><textarea id="shiftText" readonly></textarea><button id="copyShift">コピーする</button></div></div></section>
+<section id="tab-settings" class="hidden"><div class="card"><h2>アパート・部屋の管理</h2><label for="settingsBuilding">編集するアパート</label><select id="settingsBuilding"></select><div class="row"><button id="addBuilding">アパートを追加</button><button id="renameBuilding">名前を変更</button><button id="deleteBuilding" class="danger">アパートを削除</button></div><label for="routeOrder">配達ルート順（1行に1つ）</label><textarea id="routeOrder" style="min-height:110px"></textarea><button id="saveRoutes">ルート順を保存</button><h3>部屋を追加・編集</h3><div class="row"><div class="grow"><label for="settingRoom">部屋番号</label><input id="settingRoom" inputmode="numeric" placeholder="201"></div><div class="grow"><label for="settingRoute">エレベーター・コート</label><input id="settingRoute" placeholder="W-9"></div></div><button id="saveRoom">部屋を追加／ルートを更新</button><label for="findSettingRoom">登録済みの部屋を探す</label><input id="findSettingRoom" inputmode="numeric" placeholder="部屋番号で絞り込み"><div id="settingsRooms"></div></div><div class="card"><h2>バックアップ</h2><p class="hint">データはこの端末のブラウザに保存されます。機種変更やデータ消失に備えて定期的にバックアップしてください。</p><button id="exportData" class="primary">全データを書き出す</button><label for="importData">バックアップを読み込む（現在のデータを置換）</label><input type="file" id="importData" accept=".json,application/json"></div></section>
+</main><nav class="tabs" aria-label="メインメニュー"><button class="active" data-tab="packages">📦 荷物一覧</button><button data-tab="shifts">📅 シフト</button><button data-tab="settings">⚙️ 設定</button></nav>
+<script src="./initial-data.js"></script><script>
+(()=>{'use strict';const KEY='deliveryManagerV2',OLD='elevatorFinderDataV1';const $=id=>document.getElementById(id);const clone=x=>JSON.parse(JSON.stringify(x));const clean=s=>String(s??'').trim();const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));const uid=()=>String(Date.now())+Math.random().toString(36).slice(2,9);let data;try{data=JSON.parse(localStorage.getItem(KEY))}catch(e){}if(!data||!Array.isArray(data.buildings)||!Array.isArray(data.packages))data=clone(window.INITIAL_DELIVERY_DATA);if(!data.shifts)data.shifts={};if(!data.collapsed)data.collapsed={};if(!data.buildings.some(b=>b.id===data.activeBuilding))data.activeBuilding=data.buildings[0]?.id;const save=()=>{try{localStorage.setItem(KEY,JSON.stringify(data))}catch(e){alert('端末に保存できません。バックアップを作成してください。')}};const bld=()=>data.buildings.find(b=>b.id===data.activeBuilding);const pkgFor=()=>data.packages.filter(p=>p.buildingId===data.activeBuilding);const getRoom=(b,n)=>b?.rooms.find(r=>r.room===String(n));const roomSort=(a,b)=>Number(a.room)-Number(b.room)||a.room.localeCompare(b.room);let activeRoom=null;let shiftMonth=new Date();shiftMonth.setDate(1);let editingShift=false;let settingsId=null;let noticeTimer;
+// Existing search-app saved rooms are not imported automatically: they are a different data model.
+function buildingSelectors(){for(const id of ['building','settingsBuilding']){const el=$(id),prev=el.value;el.innerHTML=data.buildings.map(b=>`<option value="${esc(b.id)}">${esc(b.name)}</option>`).join('');el.value=data.activeBuilding||prev;}}
+function stats(){const p=pkgFor(),counts={rooms:new Set(p.map(x=>x.room)).size,total:p.length,pending:p.filter(x=>x.status==='pending').length,absent:p.filter(x=>x.status==='absent').length,delivered:p.filter(x=>x.status==='delivered').length};$('stats').innerHTML=[['部屋数',counts.rooms],['荷物総数',counts.total],['未対応',counts.pending],['不在',counts.absent],['配完',counts.delivered]].map(([k,v])=>`<div class="stat">${k}<strong>${v}</strong></div>`).join('')}
+function message(t){const el=$('notice');el.textContent=t;el.classList.remove('hidden');clearTimeout(noticeTimer);noticeTimer=setTimeout(()=>el.classList.add('hidden'),4200)}
+function candidates(){const q=clean($('query').value),b=bld();activeRoom=null;$('result').innerHTML='';if(!q){$('candidates').innerHTML='';return}const found=b.rooms.filter(r=>r.room.includes(q)).sort(roomSort).slice(0,35);$('candidates').innerHTML=found.length?`<div class="hint" style="margin-top:8px">候補をタップして選択</div>`+found.map(r=>`<button class="candidate" data-pick="${esc(r.room)}">${esc(r.room)}号室　｜　${esc(r.route)}</button>`).join(''):'<p class="hint">該当する部屋が見つかりません</p>';if(found.length===1&&found[0].room===q)selectRoom(q)}
+function selectRoom(n){const r=getRoom(bld(),n);if(!r)return;activeRoom=r.room;$('candidates').innerHTML='';$('result').innerHTML=`<div class="result"><strong>${esc(bld().name)}｜${esc(r.room)}号室</strong><div class="hint">${esc(r.route)}　／　配達順 ${Math.max(1,bld().routes.indexOf(r.route)+1)}</div><label for="recipient">宛名（毎回選択してください）</label><select id="recipient"><option value="">名前を選択</option>${(r.names||[]).map(name=>`<option value="${esc(name)}">${esc(name)}</option>`).join('')}<option value="__unknown__">名前未登録</option></select><div class="row" style="margin-top:7px"><input id="newRecipient" class="grow" placeholder="新しい名前を登録" maxlength="60"><button id="addRecipient" class="small">名前を保存</button></div><div class="row"><div class="grow"><label for="packageType">荷物の種類</label><select id="packageType"><option>宅急便</option><option>ネコポス</option></select></div><div style="width:95px"><label for="packageQty">個数</label><input id="packageQty" type="number" inputmode="numeric" min="1" max="100" value="1"></div></div><button id="addPackages" class="primary" style="width:100%;margin-top:12px">荷物を追加</button></div>`}
+function renderList(){stats();const b=bld(),p=pkgFor();if(!p.length){$('packageList').innerHTML='<p class="muted">荷物はまだ登録されていません。</p>';return}const routeNames=[...b.routes,...new Set(b.rooms.map(r=>r.route).filter(x=>!b.routes.includes(x)))];$('packageList').innerHTML=routeNames.map(route=>{const subset=p.filter(x=>getRoom(b,x.room)?.route===route);if(!subset.length)return '';const key=b.id+'|'+route,closed=!!data.collapsed[key],rooms=[...new Set(subset.map(x=>x.room))].sort((a,b)=>Number(a)-Number(b));return `<section class="route"><button class="routehead" data-toggle="${esc(route)}" aria-expanded="${!closed}">${closed?'▶':'▼'} ${esc(route)}（荷物${subset.length}個）</button>${closed?'':`<div class="routebody">${rooms.map(n=>{const ps=subset.filter(x=>x.room===n),names=[...new Set(ps.map(x=>x.name||'名前未登録'))];return `<div class="room"><div class="roomtitle">${esc(n)}号室 <span class="tag">${ps.length}個</span></div>${names.map(name=>`<div class="recipient">${esc(name)}</div>${ps.filter(x=>(x.name||'名前未登録')===name).map(x=>`<div class="pkg ${x.status==='pending'?'':'done'}"><div class="row"><strong class="grow">${esc(x.type)}</strong><span class="tag">${x.status==='delivered'?'✓ 配完':x.status==='absent'?'不在':'未対応'}</span></div><div class="row"><button class="small ${x.status==='delivered'?'selected':''}" data-status="${esc(x.id)}" data-value="delivered">✓ 配完</button><button class="small ${x.status==='absent'?'selected':''}" data-status="${esc(x.id)}" data-value="absent">不在</button><button class="small" data-edit="${esc(x.id)}">編集</button><button class="small danger" data-delete="${esc(x.id)}" aria-label="${esc(n)}号室の荷物を削除">🗑️</button></div></div>`).join('')}`).join('')}</div>`}).join('')}</div>`}</section>`}).join('')}
+function updateAll(){buildingSelectors();renderList();if(activeRoom&&getRoom(bld(),activeRoom))selectRoom(activeRoom);else{activeRoom=null;$('result').innerHTML=''};settingsRefresh()}
+$('query').addEventListener('input',candidates);$('candidates').addEventListener('click',e=>{const t=e.target.closest('[data-pick]');if(t)selectRoom(t.dataset.pick)});
+$('result').addEventListener('click',e=>{if(e.target.id==='addRecipient'){const name=clean($('newRecipient').value),r=getRoom(bld(),activeRoom);if(!name)return alert('名前を入力してください');if(name==='名前未登録')return alert('この名前は予約されています');if(!r.names)r.names=[];if(!r.names.includes(name)&&r.names.length>=3)return alert('この部屋に保存できる名前は3件までです');if(!r.names.includes(name))r.names.push(name);save();selectRoom(activeRoom);$('recipient').value=name;message('名前を保存しました');}if(e.target.id==='addPackages'){const r=getRoom(bld(),activeRoom),choice=$('recipient').value,qty=Number($('packageQty').value),type=$('packageType').value;if(!r||!choice)return alert('宛名を選択してください（名前未登録も選べます）');if(!Number.isInteger(qty)||qty<1||qty>100)return alert('個数は1〜100個で指定してください');if(!['宅急便','ネコポス'].includes(type))return;for(let i=0;i<qty;i++)data.packages.push({id:uid(),buildingId:bld().id,room:r.room,name:choice==='__unknown__'?'名前未登録':choice,type,status:'pending'});save();renderList();message(`${r.room}号室に${type}を${qty}個追加しました ✓`);$('query').value='';activeRoom=null;$('result').innerHTML='';$('candidates').innerHTML='';$('query').focus();}});
+$('packageList').addEventListener('click',e=>{const t=e.target.closest('button');if(!t)return;if(t.dataset.toggle){const key=bld().id+'|'+t.dataset.toggle;data.collapsed[key]=!data.collapsed[key];save();renderList();return}const id=t.dataset.status||t.dataset.edit||t.dataset.delete,p=data.packages.find(x=>x.id===id);if(!p)return;if(t.dataset.status){p.status=p.status===t.dataset.value?'pending':t.dataset.value;save();renderList();return}if(t.dataset.delete){if(confirm(`${p.room}号室／${p.name}／${p.type}を1個削除しますか？`)){data.packages=data.packages.filter(x=>x.id!==id);save();renderList()}return}if(t.dataset.edit){const b=bld(),r=getRoom(b,p.room),options=[...(r.names||[]),'名前未登録'];const name=prompt(`宛名を変更（${options.join(' / ')}）\n新しい名前も入力できます`,p.name);if(name===null)return;const v=clean(name);if(!v)return alert('名前を入力してください');if(v!=='名前未登録'&&!r.names.includes(v)){if(r.names.length>=3)return alert('この部屋に保存できる名前は3件までです');if(!confirm(`「${v}」をこの部屋の名前として保存しますか？`))return;r.names.push(v)}const type=prompt('荷物の種類を入力してください（宅急便 または ネコポス）',p.type);if(type===null)return;if(!['宅急便','ネコポス'].includes(clean(type)))return alert('宅急便またはネコポスを入力してください');p.name=v;p.type=clean(type);save();renderList();}});
+$('resetPackages').addEventListener('click',()=>{const b=bld();if(!confirm(`${b.name}の荷物をすべて削除しますか？\n名前・部屋・シフト・他の棟の荷物は残ります。`))return;data.packages=data.packages.filter(x=>x.buildingId!==b.id);for(const k of Object.keys(data.collapsed))if(k.startsWith(b.id+'|'))delete data.collapsed[k];save();renderList();message('この棟の荷物をリセットしました')});
+function switchBuilding(id){data.activeBuilding=id;activeRoom=null;$('query').value='';$('candidates').innerHTML='';$('result').innerHTML='';save();updateAll()};$('building').addEventListener('change',e=>switchBuilding(e.target.value));$('settingsBuilding').addEventListener('change',e=>switchBuilding(e.target.value));document.querySelectorAll('[data-tab]').forEach(btn=>btn.addEventListener('click',()=>{document.querySelectorAll('[data-tab]').forEach(x=>x.classList.toggle('active',x===btn));for(const id of ['packages','shifts','settings'])$('tab-'+id).classList.toggle('hidden',btn.dataset.tab!==id);if(btn.dataset.tab==='settings')settingsRefresh();if(btn.dataset.tab==='shifts')renderCalendar()}));
+const ym=()=>`${shiftMonth.getFullYear()}-${String(shiftMonth.getMonth()+1).padStart(2,'0')}`;function renderCalendar(){const key=ym(),y=shiftMonth.getFullYear(),m=shiftMonth.getMonth(),total=new Date(y,m+1,0).getDate(),offset=new Date(y,m,1).getDay();$('monthTitle').textContent=`${y}年${m+1}月`;$('shiftEdit').textContent=editingShift?'編集を終了':'シフトを編集';let h=['日','月','火','水','木','金','土'].map(s=>`<div class="muted" style="text-align:center">${s}</div>`).join('');for(let i=0;i<offset;i++)h+='<div></div>';for(let d=1;d<=total;d++){const on=(data.shifts[key]||[]).includes(d);h+=`<button class="day ${on?'on':''}" data-day="${d}" ${editingShift?'':'disabled'}>${d}${on?'<span class="circle">◯</span>':''}</button>`}$('calendar').innerHTML=h}function moveMonth(d){shiftMonth.setMonth(shiftMonth.getMonth()+d);$('shiftOutput').classList.add('hidden');renderCalendar()}$('prevMonth').addEventListener('click',()=>moveMonth(-1));$('nextMonth').addEventListener('click',()=>moveMonth(1));$('shiftEdit').addEventListener('click',()=>{editingShift=!editingShift;renderCalendar()});$('calendar').addEventListener('click',e=>{const t=e.target.closest('[data-day]');if(!t||!editingShift)return;const key=ym(),d=Number(t.dataset.day),arr=data.shifts[key]||[];data.shifts[key]=arr.includes(d)?arr.filter(x=>x!==d):[...arr,d].sort((a,b)=>a-b);save();renderCalendar()});function shiftString(){const y=shiftMonth.getFullYear(),m=shiftMonth.getMonth()+1,days=new Date(y,m,0).getDate(),on=data.shifts[ym()]||[];return [`お疲れ様です！`,`${m}月のシフト希望になります`,'◯が出勤可能日になります',...Array.from({length:days},(_,i)=>`${i+1}${on.includes(i+1)?'◯':''}`)].join('\n')}async function copyText(s){try{await navigator.clipboard.writeText(s);alert('コピーしました')}catch(e){$('shiftText').focus();$('shiftText').select();alert('自動コピーできませんでした。表示された文章を長押ししてコピーしてください。')}}$('submitShift').addEventListener('click',()=>{$('shiftText').value=shiftString();$('shiftOutput').classList.remove('hidden');copyText($('shiftText').value)});$('copyShift').addEventListener('click',()=>copyText($('shiftText').value));
+function settingsRefresh(){const b=bld();if(!b)return;$('routeOrder').value=b.routes.join('\n');renderSettingsRooms()}function renderSettingsRooms(){const b=bld(),q=clean($('findSettingRoom').value);const found=b.rooms.filter(r=>!q||r.room.includes(q)).sort(roomSort);$('settingsRooms').innerHTML=`<p class="muted">登録済み ${b.rooms.length}室（表示 ${Math.min(found.length,80)}室）</p>`+found.slice(0,80).map(r=>`<div class="settingsroom"><div class="row"><strong class="grow">${esc(r.room)}号室</strong><span class="muted">${esc(r.route)}</span><button class="small" data-roomedit="${esc(r.room)}">編集</button><button class="small danger" data-roomdelete="${esc(r.room)}">削除</button></div><div class="muted">宛名：${(r.names||[]).map(esc).join('、')||'なし'}</div><button class="small" data-nameadd="${esc(r.room)}">名前を追加</button>${(r.names||[]).map((name,i)=>`<button class="small" data-nameedit="${esc(r.room)}" data-index="${i}">${esc(name)} ✎</button><button class="small danger" data-namedel="${esc(r.room)}" data-index="${i}">×</button>`).join('')}</div>`).join('')+(found.length>80?'<p class="hint">絞り込みで残りの部屋を表示できます。</p>':'')}
+$('findSettingRoom').addEventListener('input',renderSettingsRooms);$('saveRoutes').addEventListener('click',()=>{const routes=[...new Set($('routeOrder').value.split('\n').map(clean).filter(Boolean))];if(!routes.length)return alert('ルートを入力してください');bld().routes=routes;save();renderList();settingsRefresh();alert('ルート順を保存しました')});$('saveRoom').addEventListener('click',()=>{const n=clean($('settingRoom').value),route=clean($('settingRoute').value);if(!/^\d{1,5}$/.test(n)||!route)return alert('部屋番号（数字）とルートを入力してください');const b=bld();let r=getRoom(b,n);if(r){r.route=route}else b.rooms.push({room:n,route,names:[]});if(!b.routes.includes(route))b.routes.push(route);save();updateAll();$('findSettingRoom').value=n;renderSettingsRooms();alert('部屋情報を保存しました')});$('settingsRooms').addEventListener('click',e=>{const t=e.target.closest('button');if(!t)return;const n=t.dataset.roomedit||t.dataset.roomdelete||t.dataset.nameadd||t.dataset.nameedit||t.dataset.namedel;if(!n)return;const b=bld(),r=getRoom(b,n);if(!r)return;if(t.dataset.roomedit){$('settingRoom').value=n;$('settingRoute').value=r.route;window.scrollTo({top:0,behavior:'smooth'});return}if(t.dataset.roomdelete){if(!confirm(`${n}号室を削除しますか？ この部屋の荷物も削除されます。`))return;b.rooms=b.rooms.filter(x=>x!==r);data.packages=data.packages.filter(x=>!(x.buildingId===b.id&&x.room===n))}if(t.dataset.nameadd){const v=clean(prompt(`${n}号室に追加する名前`));if(!v)return;if(v==='名前未登録'||r.names.includes(v))return alert('その名前は登録できません');if(r.names.length>=3)return alert('名前は3件までです');r.names.push(v)}if(t.dataset.nameedit){const idx=Number(t.dataset.index),old=r.names[idx],v=clean(prompt('新しい名前',old));if(!v||v==='名前未登録'||(v!==old&&r.names.includes(v)))return alert('名前を確認してください');r.names[idx]=v;for(const p of data.packages)if(p.buildingId===b.id&&p.room===n&&p.name===old)p.name=v}if(t.dataset.namedel){const idx=Number(t.dataset.index),old=r.names[idx];if(!confirm(`${n}号室の「${old}」を保存名から削除しますか？\n既存の荷物の宛名はそのまま残ります。`))return;r.names.splice(idx,1)}save();updateAll()});
+$('addBuilding').addEventListener('click',()=>{const name=clean(prompt('新しいアパート名'));if(!name)return;const id='b'+uid();data.buildings.push({id,name,routes:[],rooms:[]});switchBuilding(id)});$('renameBuilding').addEventListener('click',()=>{const name=clean(prompt('アパート名',bld().name));if(!name)return;bld().name=name;save();updateAll()});$('deleteBuilding').addEventListener('click',()=>{if(data.buildings.length<=1)return alert('最後のアパートは削除できません');const b=bld();if(!confirm(`${b.name}を部屋・宛名・荷物ごと削除しますか？`))return;data.buildings=data.buildings.filter(x=>x.id!==b.id);data.packages=data.packages.filter(x=>x.buildingId!==b.id);data.activeBuilding=data.buildings[0].id;save();updateAll()});
+$('exportData').addEventListener('click',()=>{const blob=new Blob([JSON.stringify(data,null,2)],{type:'application/json'}),url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download=`配達管理バックアップ_${new Date().toISOString().slice(0,10)}.json`;a.click();setTimeout(()=>URL.revokeObjectURL(url),1000)});$('importData').addEventListener('change',async e=>{const f=e.target.files?.[0];if(!f)return;try{const v=JSON.parse(await f.text());if(!Array.isArray(v.buildings)||!Array.isArray(v.packages)||!v.buildings.every(b=>b.id&&b.name&&Array.isArray(b.rooms)&&Array.isArray(b.routes))||!v.packages.every(p=>p.id&&p.buildingId&&p.room))throw Error('形式が違います');if(!confirm('現在の全データをバックアップの内容で置き換えますか？'))return;data=v;data.shifts||={};data.collapsed||={};data.activeBuilding=data.buildings.some(b=>b.id===data.activeBuilding)?data.activeBuilding:data.buildings[0]?.id;save();switchBuilding(data.activeBuilding);renderCalendar();alert('バックアップを読み込みました')}catch(err){alert('正しい配達管理アプリのバックアップを選択してください')}finally{e.target.value=''}});
+// Keep legacy saved searches untouched under their original key; no destructive migration.
+try{if(localStorage.getItem(OLD))console.info('以前の検索アプリの保存データは変更せず残しています。')}catch(e){}
+save();buildingSelectors();renderList();renderCalendar();settingsRefresh();if('serviceWorker'in navigator)navigator.serviceWorker.register('./sw.js').catch(()=>{});
 })();
-</script>
-</body>
-</html>
+</script></body></html>
