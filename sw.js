@@ -1,4 +1,4 @@
-const CACHE='delivery-manager-v4-20261111-package-final38';
+const CACHE='delivery-manager-v5-20261111-fixes39-41';
 const FILES=['./','./index.html','./manifest.json','./icon.svg','./initial-data.js'];
 self.addEventListener('install',event=>{event.waitUntil(caches.open(CACHE).then(cache=>cache.addAll(FILES)));self.skipWaiting()});
 self.addEventListener('activate',event=>{event.waitUntil(caches.keys().then(keys=>Promise.all(keys.filter(key=>key.startsWith('delivery-manager-')&&key!==CACHE).map(key=>caches.delete(key)))));self.clients.claim()});
