@@ -1,1 +1,1 @@
-{"name":"配達管理","short_name":"配達管理","description":"オフライン荷物・シフト管理","start_url":"./","scope":"./","display":"standalone","background_color":"#f5f7fb","theme_color":"#1764bc","icons":[{"src":"./icon.svg","sizes":"any","type":"image/svg+xml","purpose":"any maskable"}]}
+{"name":"配達管理","short_name":"配達管理","description":"オフライン荷物・シフト・稼働実績管理","start_url":"./","scope":"./","display":"standalone","background_color":"#f5f7fb","theme_color":"#1764bc","icons":[{"src":"./icon.svg","sizes":"any","type":"image/svg+xml","purpose":"any maskable"}]}
